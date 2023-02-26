@@ -1,57 +1,95 @@
 const express = require('express');
 const router = express.Router();
-var Student = require('../models/student');
-const ss = require('../services/studentService');
-router.get('/:id',ss.findById);
-
-router.get('/', ss.findAll);
-router.get('/name/:name', ss.findByName);
-router.post('/', (req, res) => {
-    Student.find({Name: req.body.Name}, (err, student) => {
-        if (err) {
-            console.log(err);
-        } else {
-            if (student.length > 0) {
-                res.json('Student name already used');
-            } else {
-                
-    new Student ({
-        Name: req.body.Name,
-        Age: req.body.Age
-    }).save((err, newContact) => {
-        if (err) {
-            console.log("Error message: "+err);
-        } else {
-            console.log(newContact);
-            res.json('Student added successfully id: '+newContact._id);
-        }
-    });
-}}});
- });
- router.delete('/:id', ss.deleteById);
-
-router.put('/:id', (req, res) => {
-    Student.findById(req.params.id, (err, student) => {
-        if (!student) {
-            res.status(404).send("Student not found");
-        } else {
-            Student.find({Name: req.body.Name}, (err, students) => {
-                if (err) {
-                    console.log(err);
-                } else {
-                    if (students.length > 0) {
-                        res.json('Student name already used');
-                    } else {
-            student.Name = req.body.Name;
-            student.Age = req.body.Age;
-            student.save().then(student => {
-                res.json('Student updated successfully');
-            }).catch(err => {
-                res.status(400).send("Update not possible");
-            });
-        }}});
-        }
-    });
+const Student = require('../models/student');
+const StudentService = require ('../services/studentService');
+// CREATE
+router.post('/students', (req, res) => {
+  const { Name, Age } = req.body;
+  const newStudent = new Student({ Name, Age });
+  newStudent.save((err, student) => {
+    if (err) {
+      return res.status(500).json({ message: err.message });
+    }
+    res.json(student);
+  });
 });
 
+// READ
+router.get('/students/:id', (req, res) => {
+  const id = req.params.id;
+  Student.findById(id, (err, student) => {
+    if (err) {
+      return res.status(500).json({ message: err.message });
+    }
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+    res.json(student);
+  });
+});
+
+// UPDATE
+router.put('/students/:id', (req, res) => {
+  const id = req.params.id;
+  const { Name, Age } = req.body;
+  Student.findByIdAndUpdate(id, { Name, Age }, { new: true }, (err, student) => {
+    if (err) {
+      return res.status(500).json({ message: err.message });
+    }
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+    res.json(student);
+  });
+});
+
+// DELETE
+router.delete('/students/:id', (req, res) => {
+  const id = req.params.id;
+  Student.findByIdAndDelete(id, (err, student) => {
+    if (err) {
+      return res.status(500).json({ message: err.message });
+    }
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+    res.json({ message: 'Student deleted' });
+  });
+});
+router.get('/students', (req, res) => {
+    Student.find({}, (err, students) => {
+      if (err) {
+        return res.status(500).json({ message: err.message });
+      }
+      res.json(students);
+    });
+  });
+ 
+  router.get('/student/by', (req, res) => {
+    Student.find({ Age: { $gt: 18 } }, (err, docs) => {
+      if (err) {
+        return res.status(500).json({ message: err.message });
+      }
+      res.json(docs);
+    });
+  });
+  router.get('/student/:age', (req, res) => {
+    const agee = parseInt(req.params.age);
+    Student.find({ Age: { $gte: agee } }, (err, docs) => {
+      if (err) {
+        return res.status(500).json({ message: err.message });
+      }
+      res.json(docs);
+    });
+  });
+  router.get('/:name', (req, res) => {
+    const name = req.params.name;
+    StudentService.doesStudentExist(name, (err, exists) => {
+      if (err) {
+        return res.status(500).json({ message: err.message });
+      }
+      res.json({ exists: exists,name  });
+    });
+  });
+  
 module.exports = router;
